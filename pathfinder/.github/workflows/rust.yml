@@ -1,0 +1,31 @@
+name: Rust
+
+on:
+  push:
+    branches: [ "main" ]
+    paths-ignore:
+    - 'LICENSE'
+    - 'README'
+    - '**.md'
+
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+    - 'LICENSE'
+    - 'README'
+    - '**.md'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+
+      - name: Build
+        run: cargo build --verbose
+
+      - name: Tests
+        run: cargo test --verbose
