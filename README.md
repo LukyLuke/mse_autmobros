@@ -1,7 +1,11 @@
 # mse_autmobros
+
 Playground for MSE-Module AutMobRoS
 
 ## Pathfinder: Grassfire
+
+[![pathfinder/.github/workflows/rust.yml](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/rust.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/rust.yml)
+[![pathfinder/.github/workflows/clippy.yml](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/clippy.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/clippy.yml)
 
 Two versions of the Grassfire-Algorithm to show how fast it can be if optimized.
 
