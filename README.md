@@ -4,8 +4,8 @@ Playground for MSE-Module AutMobRoS
 
 ## Pathfinder: Grassfire
 
-[![pathfinder/.github/workflows/rust.yml](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/rust.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/rust.yml)
-[![pathfinder/.github/workflows/clippy.yml](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/clippy.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/pathfinder/actions/workflows/clippy.yml)
+[![.github/workflows/rust.yml](https://github.com/LukyLuke/mse_autmobros/actions/workflows/rust.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/actions/workflows/rust.yml)
+[![.github/workflows/clippy.yml](https://github.com/LukyLuke/mse_autmobros/actions/workflows/clippy.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/actions/workflows/clippy.yml)
 
 Two versions of the Grassfire-Algorithm to show how fast it can be if optimized.
 
@@ -15,7 +15,7 @@ Two versions of the Grassfire-Algorithm to show how fast it can be if optimized.
 ### Usage
 
 ```
-$ cargo run -- ROWS COLS START_ROW START_COL END_ROW END_COL [OBSTACLES]
+$ target/release/pathfinder ROWS COLS START_ROW START_COL END_ROW END_COL [OBSTACLES]
 $ target/release/pathfinder ROWS COLS START_ROW START_COL END_ROW END_COL [OBSTACLES]
 ```
 
@@ -30,7 +30,7 @@ $ target/release/pathfinder ROWS COLS START_ROW START_COL END_ROW END_COL [OBSTA
 ### Example: Start top left, end bottom right
 
 ```
-$ cargo run -- 1000 1000 12 99 800 750
+$ target/release/pathfinder 1000 1000 12 99 800 750
 Field Size: 1000x1000
 Obstacles:  100 max 100x100
 
@@ -47,7 +47,7 @@ Saved: grassfire_v2.png
 ### Example: Start bottom right, end top left
 
 ```
-$ cargo run -- 1000 1000 800 750 12 99
+$ target/release/pathfinder 1000 1000 800 750 12 99
 Field Size: 1000x1000
 Obstacles:  100 max 100x100
 

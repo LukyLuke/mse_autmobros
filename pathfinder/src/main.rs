@@ -17,10 +17,10 @@ fn main() {
 	let end   = ( &args[5].parse::<usize>().unwrap_or_default() - 1, &args[6].parse::<usize>().unwrap_or_default() - 1 );
 	let obstacles = if args.len() >= 8 { args[7].parse::<usize>().unwrap_or(100) } else { 100 };
 
-	assert!(start.0 < *rows, "Start-Position X is outside of the area");
-	assert!(start.1 < *cols, "Start-Position Y is outside of the area");
-	assert!(end.0   < *rows, "End-Position X is outside of the area");
-	assert!(end.1   < *cols, "End-Position Y is outside of the area");
+	assert!(start.0 < *rows, "Start-Position X {} is outside of the area {}", start.0, *rows);
+	assert!(start.1 < *cols, "Start-Position Y {} is outside of the area {}", start.1, *rows);
+	assert!(end.0   < *rows, "End-Position X {} is outside of the area {}", end.0, *rows);
+	assert!(end.1   < *cols, "End-Position Y {} is outside of the area {}", end.1, *rows);
 
 	// The Play-Field is a one-dimensional vector where all columns are just in line
 	let px_dim = if *rows > 200 || *cols > 200 { (1, 1) } else { (5, 5) };
