@@ -15,12 +15,12 @@ fn main() {
 	let cols  = &args[2].parse::<usize>().unwrap_or_default();
 	let start = ( &args[3].parse::<usize>().unwrap_or_default() - 1, &args[4].parse::<usize>().unwrap_or_default() - 1 );
 	let end   = ( &args[5].parse::<usize>().unwrap_or_default() - 1, &args[6].parse::<usize>().unwrap_or_default() - 1 );
-	let obstacles = if args.len() >= 8 { usize::from(args[7].parse::<usize>().unwrap_or(100)) } else { 100 };
+	let obstacles = if args.len() >= 8 { args[7].parse::<usize>().unwrap_or(100) } else { 100 };
 
-	assert!(start.0 <= rows - 1, "Start-Position X is outside of the area");
-	assert!(start.1 <= cols - 1, "Start-Position Y is outside of the area");
-	assert!(end.0 <= rows - 1, "End-Position X is outside of the area");
-	assert!(end.1 <= cols - 1, "End-Position Y is outside of the area");
+	assert!(start.0 < *rows, "Start-Position X is outside of the area");
+	assert!(start.1 < *cols, "Start-Position Y is outside of the area");
+	assert!(end.0   < *rows, "End-Position X is outside of the area");
+	assert!(end.1   < *cols, "End-Position Y is outside of the area");
 
 	// The Play-Field is a one-dimensional vector where all columns are just in line
 	let px_dim = if *rows > 200 || *cols > 200 { (1, 1) } else { (5, 5) };
@@ -42,6 +42,7 @@ fn main() {
 
 	// Use Grassfire for the path: start and end position are inverted
 	{
+		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v1(&mut field, rows, cols, start, end);
 		let _ = export_image("grassfire_v1", &field, (rows, cols), start, end, &path, px_dim);
@@ -49,6 +50,7 @@ fn main() {
 
 	// Use Grassfire for the path: start and end position are inverted
 	{
+		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v2(&mut field, rows, cols, start, end);
 		let _ = export_image("grassfire_v2", &field, (rows, cols), start, end, &path, px_dim);
@@ -113,7 +115,7 @@ fn create_area(rows: &usize, cols: &usize, obstacles: &usize, max_size: &(usize,
 }
 
 
-fn export_image(algorithm: &str, area: &Vec<u64>, area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &Vec<(usize, usize)>, field_size: (usize, usize)) -> Result<(), ImageError> {
+fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &Vec<(usize, usize)>, field_size: (usize, usize)) -> Result<(), ImageError> {
 	let mut img: RgbImage = ImageBuffer::new((area_size.0 * field_size.0) as u32, (area_size.1 * field_size.1) as u32);
 	let max_value = area.iter()
 		.filter(|val| val < &&u64::MAX)

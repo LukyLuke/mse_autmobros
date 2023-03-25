@@ -11,7 +11,7 @@ pub(crate) use std::time::Instant;
 /// * `cols` - number of cols
 /// * `start` - start position (row, col)
 /// * `end` - end position (row, col)
-pub fn v1(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> Vec<(usize, usize)> {
+pub fn v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> Vec<(usize, usize)> {
 	let benchmark = Instant::now();
 
 	// Fill the start position with 1
@@ -65,7 +65,7 @@ pub fn v1(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize),
 /// * `cols` - number of cols
 /// * `start` - start position (row, col)
 /// * `end` - end position (row, col)
-pub fn v2(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> Vec<(usize, usize)> {
+pub fn v2(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> Vec<(usize, usize)> {
 	let benchmark = Instant::now();
 
 	// Fill the start position with 1
@@ -73,7 +73,7 @@ pub fn v2(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize),
 
 	// Optimization: This vector holds the fields which has been processed in the last round
 	// Based on these the neighbours can be calculated, starting on the end
-	let mut last_fields: Vec<(usize, usize)> = vec![end.clone()];
+	let mut last_fields: Vec<(usize, usize)> = vec![end];
 
 	// run as long as we have not reached the start field
 	// or as long as we have neighbours to calculate
@@ -90,39 +90,39 @@ pub fn v2(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize),
 				let col_prev = match field.1     { col if col > 0     => Some(field.1 - 1), _ => None };
 				let value = area[(field.1 * rows) + field.0] + 1;
 
-				row_next.map(|row| {
+				if let Some(row) = row_next {
 					let check_field = (row, field.1);
 					if area[(field.1 * rows) + row] == 0 {
 						next_fields.push(check_field);
 						area[(field.1 * rows) + row] = value;
 						changed = true;
 					}
-				});
-				row_prev.map(|row| {
+				};
+				if let Some(row) = row_prev {
 					let check_field = (row, field.1);
 					if area[(field.1 * rows) + row] == 0 {
 						next_fields.push(check_field);
 						area[(field.1 * rows) + row] = value;
 						changed = true;
 					}
-				});
+				};
 
-				col_next.map(|col| {
+				if let Some(col) = col_next {
 					let check_field = (field.0, col);
 					if area[(col * rows) + field.0] == 0 {
 						next_fields.push(check_field);
 						area[(col * rows) + field.0] = value;
 						changed = true;
 					}
-				});
-				col_prev.map(|col| {
+				};
+				if let Some(col) = col_prev {
 					let check_field = (field.0, col);
 					if area[(col * rows) + field.0] == 0 {
 						next_fields.push(check_field);
 						area[(col * rows) + field.0] = value;
 						changed = true;
 					}
-				});
+				};
 			});
 		last_fields = next_fields.clone();
 
@@ -147,7 +147,7 @@ pub fn v2(area: &mut Vec<u64>, rows: &usize, cols: &usize, start:(usize, usize),
 /// # Result:
 ///
 /// A Vector of tuples with usize values identifying the x/y position in the area
-fn find_path(start: (usize, usize), area: &mut Vec<u64>, rows: &usize, cols: &usize) -> Vec<(usize, usize)> {
+fn find_path(start: (usize, usize), area: &mut [u64], rows: &usize, cols: &usize) -> Vec<(usize, usize)> {
 	let benchmark = Instant::now();
 
 	let mut row_num = start.0;
