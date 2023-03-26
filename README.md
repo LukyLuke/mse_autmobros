@@ -1,11 +1,13 @@
-# mse_autmobros
-
-Playground for MSE-Module AutMobRoS
-
-## Pathfinder: Grassfire
-
 [![.github/workflows/rust.yml](https://github.com/LukyLuke/mse_autmobros/actions/workflows/rust.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/actions/workflows/rust.yml)
 [![.github/workflows/clippy.yml](https://github.com/LukyLuke/mse_autmobros/actions/workflows/clippy.yml/badge.svg)](https://github.com/LukyLuke/mse_autmobros/actions/workflows/clippy.yml)
+
+# MSE AutMobRoS - Autonomous Mobile Robotic Systems
+
+Playground for MSE-Module TSM_AutMobRoS
+
+## Pathfinder
+
+### Grassfire
 
 Two versions of the Grassfire-Algorithm to show how fast it can be if optimized.
 
@@ -13,6 +15,21 @@ Two versions of the Grassfire-Algorithm to show how fast it can be if optimized.
 * **v2:** In this version the fields which have to be calculated next are cached. So no looping thorugh all rows and columns. This is a 4-Neighborhood calculation.
 * **v3:** This is an 8-Neighborhood calculation and pathfinding based on the optimized *v2*.
 * **v4:** This is an 4-Neighborhood calculation (based on *v2*) and a 8-Neighborhood pathfinding (as in *v3*).
+
+### A* - Algorithm
+
+This is a implementation of an A*-Algorithm.
+Each field has a value for the cost from the Start to the field and one value for the direct distance (Manhatten) to the end.
+Each field can be estimated by `cost + distance` to check which one is the nearest.
+
+On each run, the fields with the lowest estimation are processed and remembered.
+Each field has a link to it's anchestor - similar to a reverse-linked-list.
+If the end is reached, the path can be resolved by moving back to the ancestor until the start is reached.
+
+* **v1:** This is a not very optimized version which can take some time if it ran into a wall.
+
+**TODO:** Not very fast, probably when going back after a dead end there can be something be optimized. Even if there is no obstacle in it's way, it's slower than Grassfire::v1 :?
+
 
 ### Usage
 
@@ -29,7 +46,7 @@ $ target/release/pathfinder ROWS COLS START_ROW START_COL END_ROW END_COL [OBSTA
 * **END_COL** Y-Position where to drive to
 * **OBSTACLES** Optional number of obstacles/walls; default 100
 
-### Example: Start top left, end bottom right
+#### Example: Start top left, end bottom right
 
 ```
 $ target/release/pathfinder 1000 1000 12 99 800 750
@@ -63,7 +80,7 @@ Saved: grassfire_v4.png
 * *v3* has nearly 50% less steps the robot has to move than in *v1* and *v2*
 * *v4* has around the same number of steps for the robot as *v3* but with the calculation speed of *v2*
 
-### Example: Start bottom right, end top left
+#### Example: Start bottom right, end top left
 
 ```
 $ target/release/pathfinder 1000 1000 800 750 12 99
