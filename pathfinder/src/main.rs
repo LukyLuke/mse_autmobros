@@ -5,7 +5,7 @@ use image::{ImageBuffer, ImageError, RgbImage};
 use rand::distributions::{Distribution, Uniform};
 
 mod grassfire;
-//mod a_star;
+mod a_star;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
@@ -66,13 +66,21 @@ fn main() {
 		let _ = export_image("grassfire_v3", &field, (rows, cols), start, end, &path, px_dim);
 	}
 
-	// Use A* for the path
-	/*{
+	// Use Grassfire for the path: 4-Neighborhood for calculation fut 8-Neighborhood for the path
+	{
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
-		let path = a_star::calculate(&mut field, rows, cols, start, end);
+		let path = grassfire::v4(&mut field, rows, cols, start, end);
+		let _ = export_image("grassfire_v4", &field, (rows, cols), start, end, &path, px_dim);
+	}
+
+	// Use A* for the path
+	{
+		#[allow(clippy::redundant_clone)]
+		let mut field = area.clone();
+		let path = a_star::v1(&mut field, rows, cols, start, end);
 		let _ = export_image("a_star_v1", &field, (rows, cols), start, end, &path, px_dim);
-	}*/
+	}
 }
 
 /// Creates the area and adds random created obstacles
@@ -100,30 +108,32 @@ fn create_area(rows: &usize, cols: &usize, obstacles: &usize, max_size: &(usize,
 	let max = *rows * *cols;
 	let mut area:Vec<u64> = vec![0; max];
 
-	// Let the noise the max value
-	let wall = u64::MAX;
+	if max_size.0 > 0 && max_size.1 > 0 {
+		// Let the noise the max value
+		let wall = u64::MAX;
 
-	// Create some random noise based on the given values
-	let range_x = Uniform::from(0..*rows);
-	let range_y = Uniform::from(0..*cols);
-	let size_x = Uniform::from(0..max_size.0);
-	let size_y = Uniform::from(0..max_size.1);
-	let mut rng = rand::thread_rng();
-	for _ in 0..*obstacles {
-		let x = range_x.sample(&mut rng);
-		let y = range_y.sample(&mut rng);
-		let sx = size_x.sample(&mut rng);
-		let sy = size_y.sample(&mut rng);
+		// Create some random noise based on the given values
+		let range_x = Uniform::from(0..*rows);
+		let range_y = Uniform::from(0..*cols);
+		let size_x = Uniform::from(0..max_size.0);
+		let size_y = Uniform::from(0..max_size.1);
+		let mut rng = rand::thread_rng();
+		for _ in 0..*obstacles {
+			let x = range_x.sample(&mut rng);
+			let y = range_y.sample(&mut rng);
+			let sx = size_x.sample(&mut rng);
+			let sy = size_y.sample(&mut rng);
 
-		for row in x..(x + sx) {
-			if row+1 > *rows {
-				break;
-			}
-			for col in y..(y + sy) {
-				if col+1 > *cols {
+			for row in x..(x + sx) {
+				if row+1 > *rows {
 					break;
 				}
-				area[(col * rows) + row] = wall;
+				for col in y..(y + sy) {
+					if col+1 > *cols {
+						break;
+					}
+					area[(col * rows) + row] = wall;
+				}
 			}
 		}
 	}
