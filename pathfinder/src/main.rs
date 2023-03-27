@@ -78,8 +78,8 @@ fn main() {
 	{
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
-		let path = a_star::v1(&mut field, rows, cols, start, end);
-		let _ = export_image("a_star_v1", &field, (rows, cols), start, end, &path, px_dim);
+		let path = a_star::calculate(&mut field, rows, cols, start, end);
+		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, px_dim);
 	}
 }
 
