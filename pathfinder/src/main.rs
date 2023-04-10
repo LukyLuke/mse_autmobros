@@ -1,11 +1,13 @@
 pub use std::time::Instant;
+pub use rand::distributions::{Distribution, Uniform};
+pub use rand::{thread_rng, Rng};
 
 use std::env;
 use image::{ImageBuffer, ImageError, RgbImage};
-use rand::distributions::{Distribution, Uniform};
 
 mod grassfire;
 mod a_star;
+mod rrt;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
@@ -47,7 +49,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v1(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v1", &field, (rows, cols), start, end, &path, px_dim);
+		let _ = export_image("grassfire_v1", &field, (rows, cols), start, end, &path, px_dim, None);
 	}
 
 	// Use Grassfire for the path: 4-Neighborhood, Optimized
@@ -55,7 +57,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v2(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v2", &field, (rows, cols), start, end, &path, px_dim);
+		let _ = export_image("grassfire_v2", &field, (rows, cols), start, end, &path, px_dim, None);
 	}
 
 	// Use Grassfire for the path: 8-Neighborhood, Based on v2
@@ -63,7 +65,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v3(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v3", &field, (rows, cols), start, end, &path, px_dim);
+		let _ = export_image("grassfire_v3", &field, (rows, cols), start, end, &path, px_dim, None);
 	}
 
 	// Use Grassfire for the path: 4-Neighborhood for calculation fut 8-Neighborhood for the path
@@ -71,7 +73,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v4(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v4", &field, (rows, cols), start, end, &path, px_dim);
+		let _ = export_image("grassfire_v4", &field, (rows, cols), start, end, &path, px_dim, None);
 	}
 
 	// Use A* for the path
@@ -79,7 +81,15 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = a_star::calculate(&mut field, rows, cols, start, end);
-		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, px_dim);
+		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, px_dim, None);
+	}
+
+	// Use PRM - Probabilistic Random tree
+	{
+		#[allow(clippy::redundant_clone)]
+		let mut field = area.clone();
+		let (path, nodes) = rrt::v1(&mut field, rows, cols, start, end);
+		let _ = export_image("rrt_v1", &field, (rows, cols), start, end, &path, px_dim, Some(&nodes));
 	}
 }
 
@@ -155,11 +165,14 @@ fn create_area(rows: &usize, cols: &usize, obstacles: &usize, max_size: &(usize,
 /// * `end` - Tuple with the end point (row, col)
 /// * `path` - List of tuples where the robot should drive on
 /// * `field_size` - Size of one field in px
+/// * `line` - Optional list of tuples to draw a line between x and y (x0, y0, x1, y1)
 ///
 /// # Result:
 ///
 /// Error from the image creation
-fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &[(usize, usize)], field_size: usize) -> Result<(), ImageError> {
+#[allow(clippy::too_many_arguments)]
+fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &[(usize, usize)], field_size: usize, line: Option<&[(usize, usize, usize, usize)]>) -> Result<(), ImageError> {
+	let fild_size_offset = field_size / 2;
 	let mut img: RgbImage = ImageBuffer::new((area_size.0 * field_size) as u32, (area_size.1 * field_size) as u32);
 	let max_value = area.iter()
 		.filter(|val| val < &&u64::MAX)
@@ -171,7 +184,7 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 		for col in 0..*area_size.1 {
 			let val = area[(col * area_size.0) + row];
 			let color = match val {
-				u64::MAX => [0, 0, 80],
+				u64::MAX => [144, 209, 237],
 				0 => [255, 255, 255],
 				_ => {
 					let red = (val * 255 / max_value) as u8;
@@ -192,23 +205,45 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 		}
 	}
 
+	// Colors for the path and edges
+	let color = [9, 105, 10];
+	let line_color = [255, 217, 94];
+
+	// Draw the lines/trees/network
+	if let Some(lines) = line {
+		for line in lines {
+			draw_line(&mut img, line_color,
+				((line.0 * field_size) + fild_size_offset, (line.1 * field_size) + fild_size_offset),
+				((line.2 * field_size) + fild_size_offset, (line.3 * field_size) + fild_size_offset));
+		}
+	}
+
 	// Draw the path
+	let mut last = &path[0];
 	for p in path {
-		let color = [192, 243, 173];
-		let c_row = (p.0) * field_size;
-		let c_col = (p.1) * field_size;
+		// Draw a Point/Node
+		let c_row = p.0 * field_size;
+		let c_col = p.1 * field_size;
 		for x in c_row..(c_row + field_size) {
 			for y in c_col..(c_col + field_size) {
 				let px = img.get_pixel_mut(x as u32, y as u32);
 				*px = image::Rgb(color);
 			}
 		}
+
+		// Draw the line over the point
+		if line.is_some() && p != last {
+			draw_line(&mut img, color,
+				((last.0 * field_size) + fild_size_offset, (last.1 * field_size) + fild_size_offset),
+				((p.0 * field_size) + fild_size_offset, (p.1 * field_size) + fild_size_offset));
+			last = p;
+		}
 	}
 
 	// Draw start
-	let color = [0, 221, 255];
-	let c_row = (start.0) * field_size;
-	let c_col = (start.1) * field_size;
+	let color = if line.is_some() { [164, 8, 160] } else { [243, 219, 5] };
+	let c_row = start.0 * field_size;
+	let c_col = start.1 * field_size;
 	for x in c_row..(c_row + field_size) {
 		for y in c_col..(c_col + field_size) {
 			let px = img.get_pixel_mut(x as u32, y as u32);
@@ -217,9 +252,9 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 	}
 
 	// Draw the end
-	let color = [0, 255, 47];
-	let c_row = (end.0) * field_size;
-	let c_col = (end.1) * field_size;
+	let color = if line.is_some() { [130, 12, 30] } else { [36, 178, 156] };
+	let c_row = end.0 * field_size;
+	let c_col = end.1 * field_size;
 	for x in c_row..(c_row + field_size) {
 		for y in c_col..(c_col + field_size) {
 			let px = img.get_pixel_mut(x as u32, y as u32);
@@ -232,3 +267,48 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 	println!("Saved: {}\n", file_name);
 	Ok(())
 }
+
+/// Draws a line from point p1 to point p2 with the given color
+///
+/// # Arguments:
+///
+/// * `img` - The image to draw the line on
+/// * `color` - Color values [R, G, B] with R,G,B in range of 0..255
+/// * `p1` - Start point
+/// * `p2` - End point
+fn draw_line(img: &mut RgbImage, color: [u8; 3], p1: (usize, usize), p2: (usize, usize)) {
+	let dx = if p1.0 > p2.0 { p1.0 - p2.0 } else { p2.0 - p1.0 } as i64;
+	let dy = if p1.1 > p2.1 { p1.1 - p2.1 } else { p2.1 - p1.1 } as i64;
+
+	let sx = if p1.0 < p2.0 { 1 } else { -1 } as i64;
+	let sy = if p1.1 < p2.1 { 1 } else { -1 } as i64;
+
+	// Initialize error
+	let mut err = if dx > dy { dx } else { -dy } / 2;
+	let mut err2;
+
+	let mut x = p1.0 as i64;
+	let mut y = p1.1 as i64;
+	loop {
+		if x == p2.0 as i64 && y == p2.1 as i64 {
+			break
+		}
+
+		let px = img.get_pixel_mut(x as u32, y as u32);
+		*px = image::Rgb(color);
+
+		// Store old error
+		err2 = 2 * err;
+
+		// Adjust error and start position
+		if err2 > -dx {
+			err -= dy;
+			x += sx;
+		}
+		if err2 < dy {
+			err += dx;
+			y += sy;
+		}
+	}
+}
+
