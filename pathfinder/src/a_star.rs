@@ -61,8 +61,8 @@ pub fn calculate(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usi
 
 		// Get the lowest calculated path length based on all known fields
 		// If there is no field calculated yet, there can be no estimation
-		let min_path_estimation = fields_cache.iter()
-			.map(|(_, values)| values.1)
+		let min_path_estimation = fields_cache.values()
+			.map(|value| value.1)
 			.min_by(|a, b| a.cmp(b))
 			.unwrap_or_default();
 
