@@ -3,6 +3,24 @@ use crate::{Instant, thread_rng, Rng};
 const MAX_NODES: usize = 16383;
 const END_POSITION: i32 = 5; // radius around the end to catch the end position
 
+/// The result of a tree algorithm
+#[derive(Debug)]
+pub struct TreeResult {
+	/// The path from start to the end
+	pub path: Vec<(usize, usize)>,
+	/// The tree as lines/tuples: ((x0, y0), (x1, y1))
+	pub tree: Vec<((usize, usize), (usize, usize))>,
+}
+
+/// Inner type representing a node
+#[derive(Debug, Clone)]
+struct Node {
+	/// Coordinates
+	pos: (usize, usize),
+	// Parent node index
+	parent: usize,
+}
+
 /// Use the Probabilistic Random Tree Algorithm to find a path.
 ///
 /// Version 1:
@@ -24,24 +42,27 @@ const END_POSITION: i32 = 5; // radius around the end to catch the end position
 /// A tuple with:
 /// * A Vector of tuples where each tuple represents a waypoint
 /// * A Vector of tuples where each tuple represents an edge of the tree
-#[allow(clippy::type_complexity)]
-pub fn v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> (Vec<(usize, usize)>, Vec<(usize, usize, usize, usize)>) {
+pub fn rrt_v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> TreeResult {
 	let benchmark = Instant::now();
 	let mut rng = thread_rng();
 	let mut found_end = false;
 
 	// Configuration
-	let max_distance = 10.0;
-	let max_nodes = usize::min(MAX_NODES, (area.len() as f32 / max_distance) as usize);
+	let step_distance = 10.0;
+	let max_nodes = usize::min(MAX_NODES, (area.len() as f32 / step_distance) as usize);
 	let mut nodes: Vec<Node> = Vec::with_capacity(max_nodes);
 
 	// Range in which the algorithm will connect to the end
 	// this is `+/- END_POSITION` of the end itself
-	let finish_range: (usize, usize, usize, usize) = (
-		i32::max(0, end.0 as i32 - END_POSITION) as usize,
-		end.0 + END_POSITION as usize,
-		i32::max(0, end.1 as i32 - END_POSITION) as usize,
-		end.1 + END_POSITION as usize,
+	let finish_range: ((usize, usize), (usize, usize)) = (
+		(
+			i32::max(0, end.0 as i32 - END_POSITION) as usize,
+			end.0 + END_POSITION as usize
+		),
+		(
+			i32::max(0, end.1 as i32 - END_POSITION) as usize,
+			end.1 + END_POSITION as usize
+		),
 	);
 
 	// Initialize with the start node
@@ -54,44 +75,41 @@ pub fn v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), en
 		// Loop until we have filled the whole nodes vector
 		if nodes.len() == max_nodes { break; }
 
-		// 1. Get a random point on the area where to drive to
-		let random_sample = (rng.gen_range(0..*rows), rng.gen_range(0..*cols));
-
-		// 2. Find the nearest collision free Node
 		let mut last_distance = f32::MAX;
 		let mut new_node = Node {
 			pos: (0, 0),
 			parent: 0,
 		};
 
-		let mut replaced_with_end = false;
+		// 1. Get a random point on the area where to give the direction
+		let direction_node = (rng.gen_range(0..*rows), rng.gen_range(0..*cols));
+
+		// 2. Find the nearest collision free Node
 		nodes.iter().enumerate().for_each(|(key, node)| {
-			// The new node to check
-			let new_pos = get_new_position(node.pos, random_sample, max_distance);
-			let new_distance = new_pos.2;
+			// Do not grow the tree from the end
+			if node.pos != end {
+				// The new node to check
+				let (new_pos, distance) = get_new_position(node.pos, direction_node, step_distance);
 
-			// Check if the new node may be a valid one and update it
-			if last_distance > new_distance && is_collision_free(area, rows, node, new_pos) {
-				last_distance = new_pos.2;
+				// Check if the new node may be a valid one and update it
+				if last_distance > distance && is_collision_free(area, rows, node, new_pos) {
+					last_distance = distance;
 
-				// Check if the new point is in the finishing area
-				new_node.parent = key;
-				new_node.pos = if (new_pos.0 >= finish_range.0 && new_pos.0 <= finish_range.1) && (new_pos.1 >= finish_range.2 && new_pos.1 <= finish_range.3) {
-					replaced_with_end = true;
-					end
-				} else {
-					replaced_with_end = false;
-					(new_pos.0, new_pos.1)
-				};
+					new_node.parent = key;
+					new_node.pos = if is_in_range(new_pos, finish_range) {
+						end
+					} else {
+						new_pos
+					};
+				}
 			}
 		});
 
 		if last_distance < f32::MAX {
 			nodes.push(new_node.clone());
-			if !found_end && replaced_with_end {
+			if new_node.pos == end {
 				found_end = true;
-				println!("RRT-V1 End Reached: {:.6?}", benchmark.elapsed());
-				println!("RRT-V1 End Reached: {:?}", nodes.len());
+				println!("RRT-V1 End reached within {}: {:.6?}", nodes.len(), benchmark.elapsed());
 			}
 		}
 	}
@@ -99,11 +117,28 @@ pub fn v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), en
 	if !found_end { println!("RRT-V1 Calc: No conneciton found"); }
 	println!("RRT-V1 Calc: {:.6?}", benchmark.elapsed());
 
-	// For the return value we need only the position as a tuple (x0, y0, x1, y1) to draw the tree/network
-	let result_nodes = nodes.iter().map(|node| (node.pos.0, node.pos.1, nodes[node.parent].pos.0, nodes[node.parent].pos.1)).collect();
+	// For the return value we need only the position as a tuple ((x0, y0), (x1, y1)) to draw the tree/network
+	let result_nodes = nodes.iter().map(|node| (node.pos, nodes[node.parent].pos)).collect();
 
 	// Return the tuple of the path-vector and tree-vector
-	(find_path("RRT-V1", end, area, rows, cols, &nodes), result_nodes)
+	TreeResult {
+		path: find_path("RRT-V1", end, &nodes),
+		tree: result_nodes,
+	}
+}
+
+/// Checks if the given postion is in the defined range
+///
+/// # Arguments:
+///
+/// * `pos` - Position to check, a Tuple of (x, y)
+/// * `range` - The range to check, a Tuple of ((x0, x1), (y0, y1))
+///
+/// # Result
+///
+/// If the point is in the x-y range
+fn is_in_range(pos: (usize, usize), range: ((usize, usize), (usize, usize))) -> bool {
+	(pos.0 >= range.0.0 && pos.0 <= range.0.1) && (pos.1 >= range.1.0 && pos.1 <= range.1.1)
 }
 
 /// Returns a new point directing to the given end, maximum step_size apart from the start
@@ -118,33 +153,36 @@ pub fn v1(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), en
 ///
 /// A tuple represents the new point, step_size apart from the start.
 /// The third parameter represents the distance between the start and the direction point
-fn get_new_position(start: (usize, usize), direction: (usize, usize), step_size: f32) -> (usize, usize, f32) {
+fn get_new_position(start: (usize, usize), direction: (usize, usize), step_size: f32) -> ((usize, usize), f32) {
 	let direction_x = direction.0 as f32 - start.0 as f32;
 	let direction_y = direction.1 as f32 - start.1 as f32;
-	let distance = f32::sqrt( (direction_x * direction_x) as f32  +  (direction_y * direction_y) as f32 );
+	let distance = f32::sqrt((direction_x * direction_x) + (direction_y * direction_y));
 
-	let max_step_size = if step_size < distance { step_size } else { distance } as f32;
+	// If the direction-point is nearer than the new point, use the direction-point
+	if step_size >= distance {
+		return (direction, distance);
+	}
 
 	let angle = direction_y.atan2(direction_x);
-	let new_x = (start.0 as f32 + (max_step_size * angle.cos())) as usize;
-	let new_y = (start.1 as f32 + (max_step_size * angle.sin())) as usize;
-
-	(new_x, new_y, distance)
+	let new_x = (start.0 as f32 + (step_size * angle.cos())) as usize;
+	let new_y = (start.1 as f32 + (step_size * angle.sin())) as usize;
+	((new_x, new_y), distance)
 }
 
-/// Checks the area if between the two given points is am obstacle
+/// Checks the area if between the two given points is an obstacle.
+/// This is done by simply "draw" a line between and check the line-pixels on the area.
 ///
 /// # Arguments:
 ///
 /// * `area` - The area as a vector of u64 where every obstacle is u64::MAX
 /// * `rows` - Number of rows, where rows x cols is the size of the area
 /// * `node` - Node from where the line to check starts
-/// * `new_pos` - A tuple represents the end point incl. the distance to it
+/// * `new_pos` - A tuple represents the end point
 ///
 /// # Result
 ///
 /// Returns if there is an obstacle between the two points
-fn is_collision_free(area: &[u64], rows: &usize, node: &Node, new_pos: (usize, usize, f32)) -> bool {
+fn is_collision_free(area: &[u64], rows: &usize, node: &Node, new_pos: (usize, usize)) -> bool {
 	let p1 = node.pos;
 	let p2 = (new_pos.0, new_pos.1);
 
@@ -185,14 +223,18 @@ fn is_collision_free(area: &[u64], rows: &usize, node: &Node, new_pos: (usize, u
 	true
 }
 
-#[derive(Debug, Clone)]
-struct Node {
-	pos: (usize, usize),
-	parent: usize,
-}
-
-
-fn find_path(algorithm: &str, end: (usize, usize), _area: &[u64], _rows: &usize, _cols: &usize, nodes: &[Node]) -> Vec<(usize, usize)> {
+/// Based on all nodes which represents the tree, the path back from the end to the start is extracted and returned
+///
+/// # Arguments:
+///
+/// * `algorithm` - The name of the Algorithm (for benchmark logging)
+/// * `end` - The End-Position as a tuple (x, y)
+/// * `nodes` - All the nodes of the tree
+///
+/// # Result:
+///
+/// The Path from the end to the start as tuples of coordinates [(x, y)]
+fn find_path(algorithm: &str, end: (usize, usize), nodes: &[Node]) -> Vec<(usize, usize)> {
 	let benchmark = Instant::now();
 	let mut result = vec![];
 

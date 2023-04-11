@@ -7,7 +7,7 @@ use image::{ImageBuffer, ImageError, RgbImage};
 
 mod grassfire;
 mod a_star;
-mod rrt;
+mod tree;
 
 fn main() {
 	let args: Vec<String> = env::args().collect();
@@ -27,7 +27,6 @@ fn main() {
 	assert!(end.1   < *cols, "End-Position Y {} is outside of the area {}", end.1, *rows);
 
 	// The Play-Field is a one-dimensional vector where all columns are just in line
-	let px_dim = if *rows > 200 || *cols > 200 { 1 } else { 5 };
 	let max_size = (rows / 10, cols / 10);
 	let mut area = create_area(rows, cols, &obstacles, &max_size);
 	let mut count = 0;
@@ -49,7 +48,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v1(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v1", &field, (rows, cols), start, end, &path, px_dim, None);
+		let _ = export_image("grassfire_v1", &field, (rows, cols), start, end, &path, None);
 	}
 
 	// Use Grassfire for the path: 4-Neighborhood, Optimized
@@ -57,7 +56,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v2(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v2", &field, (rows, cols), start, end, &path, px_dim, None);
+		let _ = export_image("grassfire_v2", &field, (rows, cols), start, end, &path, None);
 	}
 
 	// Use Grassfire for the path: 8-Neighborhood, Based on v2
@@ -65,7 +64,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v3(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v3", &field, (rows, cols), start, end, &path, px_dim, None);
+		let _ = export_image("grassfire_v3", &field, (rows, cols), start, end, &path, None);
 	}
 
 	// Use Grassfire for the path: 4-Neighborhood for calculation fut 8-Neighborhood for the path
@@ -73,7 +72,7 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = grassfire::v4(&mut field, rows, cols, start, end);
-		let _ = export_image("grassfire_v4", &field, (rows, cols), start, end, &path, px_dim, None);
+		let _ = export_image("grassfire_v4", &field, (rows, cols), start, end, &path, None);
 	}
 
 	// Use A* for the path
@@ -81,15 +80,15 @@ fn main() {
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = a_star::calculate(&mut field, rows, cols, start, end);
-		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, px_dim, None);
+		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, None);
 	}
 
 	// Use PRM - Probabilistic Random tree
 	{
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
-		let (path, nodes) = rrt::v1(&mut field, rows, cols, start, end);
-		let _ = export_image("rrt_v1", &field, (rows, cols), start, end, &path, px_dim, Some(&nodes));
+		let path = tree::rrt_v1(&mut field, rows, cols, start, end);
+		let _ = export_image("rrt_v1", &field, (rows, cols), start, end, &path.path, Some(&path.tree));
 	}
 }
 
@@ -164,14 +163,14 @@ fn create_area(rows: &usize, cols: &usize, obstacles: &usize, max_size: &(usize,
 /// * `start` - Tuple with the start point (row, col)
 /// * `end` - Tuple with the end point (row, col)
 /// * `path` - List of tuples where the robot should drive on
-/// * `field_size` - Size of one field in px
-/// * `line` - Optional list of tuples to draw a line between x and y (x0, y0, x1, y1)
+/// * `line` - Optional list of tuples to draw a line between x and y ((x0, y0), (x1, y1))
 ///
 /// # Result:
 ///
 /// Error from the image creation
 #[allow(clippy::too_many_arguments)]
-fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &[(usize, usize)], field_size: usize, line: Option<&[(usize, usize, usize, usize)]>) -> Result<(), ImageError> {
+fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), start: (usize, usize), end: (usize, usize), path: &[(usize, usize)], line: Option<&[((usize, usize), (usize, usize))]>) -> Result<(), ImageError> {
+	let field_size = if area_size.0 > &200 || area_size.1 > &200 { 1 } else { 5 };
 	let fild_size_offset = field_size / 2;
 	let mut img: RgbImage = ImageBuffer::new((area_size.0 * field_size) as u32, (area_size.1 * field_size) as u32);
 	let max_value = area.iter()
@@ -213,8 +212,8 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 	if let Some(lines) = line {
 		for line in lines {
 			draw_line(&mut img, line_color,
-				((line.0 * field_size) + fild_size_offset, (line.1 * field_size) + fild_size_offset),
-				((line.2 * field_size) + fild_size_offset, (line.3 * field_size) + fild_size_offset));
+				((line.0.0 * field_size) + fild_size_offset, (line.0.1 * field_size) + fild_size_offset),
+				((line.1.0 * field_size) + fild_size_offset, (line.1.1 * field_size) + fild_size_offset));
 		}
 	}
 
