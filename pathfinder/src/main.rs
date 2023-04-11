@@ -42,7 +42,7 @@ fn main() {
 
 	println!("Field Size: {}x{}", rows, cols);
 	println!("Obstacles:  {} max {}x{}\n", obstacles, max_size.0, max_size.1);
-
+/*
 	// Use Grassfire for the path: 4-Neighborhood, Not optimized
 	{
 		#[allow(clippy::redundant_clone)]
@@ -82,13 +82,20 @@ fn main() {
 		let path = a_star::calculate(&mut field, rows, cols, start, end);
 		let _ = export_image("a_star_calculate", &field, (rows, cols), start, end, &path, None);
 	}
-
-	// Use PRM - Probabilistic Random tree
+*/
+	// Use RRT - Rapidly-Exploring Random Tree
 	{
 		#[allow(clippy::redundant_clone)]
 		let mut field = area.clone();
 		let path = tree::rrt_v1(&mut field, rows, cols, start, end);
 		let _ = export_image("rrt_v1", &field, (rows, cols), start, end, &path.path, Some(&path.tree));
+	}
+	// Use RRT* - Rapidly-Exploring Random Tree with rewiring
+	{
+		#[allow(clippy::redundant_clone)]
+		let mut field = area.clone();
+		let path = tree::rrt_v2(&mut field, rows, cols, start, end);
+		let _ = export_image("rrt_v2", &field, (rows, cols), start, end, &path.path, Some(&path.tree));
 	}
 }
 

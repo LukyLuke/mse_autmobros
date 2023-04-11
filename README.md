@@ -54,6 +54,7 @@ After a predefined maximum of nodes, the calculation stops.
 If in there was no conenction made to the end, there seems to be no possible connection.
 
 * **v1:** Standard algorithm with no special optimization.
+* **v2:** RRT* algorithm which checks for the shortest path for each new node and rewires surrounding nodes afterwards. Normally all children should be updated afterwards, but that seems not to be needed as multiple runs have shown.
 
 
 ### Usage
@@ -104,13 +105,21 @@ A*-Algorithm Path-Calculation: 20.408000µs
 A*-Algorithm Path length: 899
 Saved: a_star_calculate.png
 
-RRT-V1 End Reached: 1.379851s
-RRT-V1 End Reached: 8196
-RRT-V1 Calc: 5.516622s
-RRT-V1 Path-Calculation: 4.949000µs
-RRT-V1 Path length: 167
+RRT-V1 End reached within 2001: 109.392232ms
+RRT-V1 End reached within 6718: 966.630990ms
+RRT-V1 End reached within 7957: 1.343807s
+RRT-V1 Calc: 5.605508s
+RRT-V1 Path-Calculation: 4.399000µs
+RRT-V1 Path length: 148
 RRT-V1 Tree Edges: 16383
 Saved: rrt_v1.png
+
+RRT-V2 End reached within 1362: 100.404256ms
+RRT-V2 Calc: 9.342885s
+RRT-V2 Path-Calculation: 2.866000µs
+RRT-V2 Path length: 10
+RRT-V2 Tree Edges: 16383
+Saved: rrt_v2.png
 ```
 
 * *Grassfire-v1* is nearly 400 times slower than *v2* and 230 times slower than *v3*
@@ -119,6 +128,7 @@ Saved: rrt_v1.png
 * *Grassfire-v4* has around the same number of steps for the robot as *v3* but with the calculation speed of *v2*
 * *A-v1* slows down drastically as soon as it hits an obstacle, the direction does not matter
 * *RRT-v1* has to process until the number of steps is reached. In each step it has to check for more nodes. It does not matter from which direction the tree is built.
+* *RRT-v2* takes around 50% more time due to the check for the nearest node based on the distance
 
 #### Example: Start bottom right, end top left
 
@@ -153,13 +163,19 @@ A*-Algorithm Path-Calculation: 22.262000µs
 A*-Algorithm Path length: 911
 Saved: a_star_calculate.png
 
-RRT-V1 End Reached: 1.166924s
-RRT-V1 End Reached: 7494
-RRT-V1 Calc: 1.394317s
-RRT-V1 Path-Calculation: 4.739000µs
-RRT-V1 Path length: 130
-RRT-V1 Tree Edges: 8192
+RRT-V1 End reached within 12822: 3.468241s
+RRT-V1 Calc: 5.638908s
+RRT-V1 Path-Calculation: 10.269000µs
+RRT-V1 Path length: 133
+RRT-V1 Tree Edges: 16383
 Saved: rrt_v1.png
+
+RRT-V2 End reached within 16240: 9.280990s
+RRT-V2 Calc: 9.430625s
+RRT-V2 Path-Calculation: 9.788000µs
+RRT-V2 Path length: 8
+RRT-V2 Tree Edges: 16383
+Saved: rrt_v2.png
 ```
 
 * *Grassfire-v1* is only 2-3 times slower, in most cases it is arount the same speed as *v2*. Under some circumstances it may be that *v1* is even faster because it can update all cells in one run.
@@ -168,3 +184,4 @@ Saved: rrt_v1.png
 * *Grassfire-v4* has around the same number of steps for the robot as *v3* but with the calculation speed of *v2*
 * *A-v1* slows down drastically as soon as it hits an obstacle, the direction does not matter
 * *RRT-v1* has to process until the number of steps is reached. In each step it has to check for more nodes. It does not matter from which direction the tree is built.
+* *RRT-v2* takes around 50% more time due to the check for the nearest node based on the distance
