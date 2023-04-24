@@ -1,0 +1,3 @@
+[submodule "eeros"]
+	path = eeros/eeros-framework
+	url = https://github.com/eeros-project/eeros-framework.git
