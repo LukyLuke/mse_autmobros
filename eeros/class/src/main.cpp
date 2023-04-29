@@ -4,8 +4,9 @@
 #include <eeros/safety/SafetySystem.hpp>
 #include <eeros/sequencer/Sequencer.hpp>
 #include <eeros/hal/HAL.hpp>
-#include "ControlSystem.hpp"
-#include "MyRobotSafetyProperties.hpp"
+
+#include "RobotControlSystem.hpp"
+#include "RobotSafetyProperties.hpp"
 #include "MainSequence.hpp"
 
 void signalHandler(int signum) {
@@ -20,30 +21,30 @@ int main(int argc, char **argv) {
 
 	log.info() << "Starting template project...";
 
-	// log.info() << "Initializing hardware...";
-	// eeros::hal::HAL& hal = eeros::hal::HAL::instance();
-	// hal.readConfigFromFile(&argc, argv);
+	log.info() << "Initializing hardware...";
+	eeros::hal::HAL& hal = eeros::hal::HAL::instance();
+	hal.readConfigFromFile(&argc, argv);
 
 	log.info() << "Initializing control system...";
-	ControlSystem cs(dt);
+	RobotControlSystem controlSystem(dt);
 
 	log.info() << "Initializing safety system...";
-	MyRobotSafetyProperties sp(cs, dt);
-	eeros::safety::SafetySystem ss(sp, dt);
+	RobotSafetyProperties safetyProperties(controlSystem, dt);
+	eeros::safety::SafetySystem safetySystem(safetyProperties, dt);
 
 	// Fired if timedomain fails to run properly
-	cs.timedomain.registerSafetyEvent(ss, sp.doSystemOff);
+	controlSystem.timedomain.registerSafetyEvent(safetySystem, safetyProperties.shutdown);
 	signal(SIGINT, signalHandler);
 
 	log.info() << "Initializing sequencer...";
 	auto &sequencer = eeros::sequencer::Sequencer::instance();
-	MainSequence mainSequence("Main Sequence", sequencer, ss, sp, cs);
+	MainSequence mainSequence("Main Sequence", sequencer, safetySystem, safetyProperties, controlSystem);
 	mainSequence();
 
 	log.info() << "Initializing executor...";
 	auto &executor = eeros::Executor::instance();
-	executor.setMainTask(ss);
-	ss.triggerEvent(sp.doSystemOn);
+	executor.setMainTask(safetySystem);
+	safetySystem.triggerEvent(safetyProperties.start);
 	executor.run();
 
 	mainSequence.wait();

@@ -1,6 +1,6 @@
-#include "MyRobotSafetyProperties.hpp"
+#include "RobotSafetyProperties.hpp"
 
-MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &controlSystem, double dt) :
+RobotSafetyProperties::RobotSafetyProperties(RobotControlSystem &controlSystem, double dt) :
 	start("Starting"),
 	shutdown("Shutdown"),
 	halt("Halt"),
@@ -56,10 +56,11 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &controlSystem, d
 	slShuttingDown.addEvent(shutdown, slSystemOff, kPrivateEvent);
 	slBreaking.addEvent(halt, slShuttingDown, kPrivateEvent);
 	slStartingUp.addEvent(started, slSystemOn, kPrivateEvent);
-	slEmergencyMode.addEvent(reset, slSystemOn, kPrivateEvent);
+	slEmergencyMode.addEvent(abort, slSystemOn, kPublicEvent);
 	slEmergencyStop.addEvent(halted, slEmergencyMode, kPrivateEvent);
 	slSystemOn.addEvent(powerOn, slMotorsOn, kPublicEvent);
 	slMotorsOn.addEvent(startMoving, slRobotMoving, kPublicEvent);
+	slRobotMoving.addEvent(shutdown, slBreaking, kPublicEvent);
 
 	// Emergency and Abort/Halt Events
 	addEventToAllLevelsBetween(slSystemOn, slRobotMoving, emergency, slEmergencyStop, kPublicEvent);
@@ -70,7 +71,7 @@ MyRobotSafetyProperties::MyRobotSafetyProperties(ControlSystem &controlSystem, d
 	slShuttingDown.setInputActions({ ignore(btnPause), ignore(btnMode)});
 	slBreaking.setInputActions({ ignore(btnPause), check(btnMode, false, reset)});
 	slStartingUp.setInputActions({ ignore(btnPause), check(btnMode, false, abort)});
-	slEmergencyMode.setInputActions({ check(btnPause, false, reset), check(btnMode, false, abort)});
+	slEmergencyMode.setInputActions({ ignore(btnPause), check(btnMode, false, abort)});
 	slEmergencyStop.setInputActions({ ignore(btnPause), ignore(btnMode)});
 	slSystemOn.setInputActions({ check(btnPause, false, emergency), check(btnMode, false, abort)});
 	slMotorsOn.setInputActions({ check(btnPause, false, emergency), check(btnMode, false, abort)});

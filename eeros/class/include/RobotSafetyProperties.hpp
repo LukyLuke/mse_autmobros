@@ -2,11 +2,11 @@
 
 #include <eeros/safety/SafetyProperties.hpp>
 #include <eeros/hal/HAL.hpp>
-#include "ControlSystem.hpp"
+#include "RobotControlSystem.hpp"
 
-class MyRobotSafetyProperties : public eeros::safety::SafetyProperties {
+class RobotSafetyProperties : public eeros::safety::SafetyProperties {
 public:
-	MyRobotSafetyProperties(ControlSystem &controlSystem, double dt);
+	RobotSafetyProperties(RobotControlSystem &controlSystem, double dt);
 
 	// Define all possible events
 	eeros::safety::SafetyEvent start;
@@ -44,5 +44,5 @@ private:
 	eeros::hal::Input<bool>* btnPause;
 	eeros::hal::Input<bool>* btnMode;
 
-	ControlSystem &controlSystem;
+	RobotControlSystem &controlSystem;
 };

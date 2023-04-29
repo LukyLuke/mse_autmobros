@@ -26,7 +26,7 @@ $ podman build --tag=eeros-build:1.0 .
 
 # Staring the Container the first time
 # Give it the name: eeros-playing
-$ podman run -tty -i --replace --name eeros-playing -v ./playing:/project:cached localhost/eeros-build:1.0
+$ podman run --tty -i --replace --name eeros-class -v ./class:/project:cached localhost/eeros-build:1.0
 root@...:/# ./build.sh
 
 # After change some code and rebuild it by just starting the Container
@@ -34,4 +34,15 @@ $ podman start -a eeros-playing
 root@...:/# ./build.sh
 ```
 
+After this, copy over the binary and config file to the BeagleBone Blue:
+```bash
+$ scp -o HostKeyAlgorithms=+ssh-rsa build/eeros_test  ost@192.168.7.2:
+$ scp -o HostKeyAlgorithms=+ssh-rsa build/HwConfigBBBlue.json  ost@192.168.7.2:
+```
+*(We need the old Host-Key algorithm due to the old image we use from OST...)*
 
+Finally on the BeagleBone Blue, run it:
+```bash
+$ ssh -o HostKeyAlgorithms=+ssh-rsa ost@192.168.7.2
+$ sudo ./eeros_test -c HwConfigBBBlue.json
+```
