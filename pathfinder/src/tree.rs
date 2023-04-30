@@ -9,7 +9,7 @@
 use crate::{Instant, thread_rng, Rng};
 
 const MAX_NODES: usize = 16383;
-const STEP_DISTANCE: f32 = 10.0;
+const STEP_DISTANCE: f32 = 100.0;
 const END_POSITION: i32 = 5; // radius around the end to catch the end position
 const REWIRE_DISTANCE_FACTOR: i32 = 2; // Check all nodes to rewire in the radius: `REWIRE_DISTANCE_FACTOR * STEP_DISTANCE`
 
@@ -242,6 +242,186 @@ pub fn rrt_v2(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize)
 	}
 }
 
+
+/// Use the Rapidly-Exploring RandomTree Algorithm: RRT*
+///
+/// Version 3:
+///
+/// Based on Version 2 with an optimized node algorithm.
+/// After the end is reached, only nodes inside an ellipsis, defined by the maximum values of the path, are taken into account.
+///
+/// # Arguments
+///
+/// * `area` - The play field as a one-dimensional vector
+/// * `rows` - number of rows
+/// * `cols` - number of cols
+/// * `start` - start position (row, col)
+/// * `end` - end position (row, col)
+///
+/// # Result
+///
+/// A tuple with:
+/// * A Vector of tuples where each tuple represents a waypoint
+/// * A Vector of tuples where each tuple represents an edge of the tree
+pub fn rrt_v3(area: &mut [u64], rows: &usize, cols: &usize, start:(usize, usize), end:(usize, usize)) -> TreeResult {
+	let benchmark = Instant::now();
+	let mut rng = thread_rng();
+	let mut found_end = false;
+
+	// Configuration
+	let max_nodes = usize::min(MAX_NODES, (area.len() as f32 / STEP_DISTANCE) as usize);
+	let mut nodes: Vec<Node> = Vec::with_capacity(max_nodes);
+	let finish_range = get_range(end, END_POSITION);
+
+	// Initialize with the start node
+	nodes.push(Node {
+		pos: start,
+		parent: 0,
+		distance: 0.0,
+	});
+
+	loop {
+		// Loop until we have filled the whole nodes vector
+		if nodes.len() == max_nodes { break; }
+
+		let mut last_distance = f32::MAX;
+		let mut new_node = Node {
+			pos: (0, 0),
+			parent: 0,
+			distance: 0.0,
+		};
+
+		// 1. Get a random point on the area where to give the direction
+		let direction_node = (rng.gen_range(0..*rows), rng.gen_range(0..*cols));
+
+		// Get the path from the end to the start
+		let path = if found_end { find_path("", end, &nodes) } else { vec![] };
+
+		// 2. Find the nearest collision free Node
+		nodes.iter().for_each(|node| {
+			// Do not grow the tree from the end
+			if node.pos != end && in_elliptic_region(start, end, &path, node.pos) {
+				// The new node to check
+				let (new_pos, distance) = get_new_position(node.pos, direction_node, STEP_DISTANCE);
+
+				// Check if the new node may be a valid one and update it
+				if last_distance > distance && is_collision_free(area, rows, node, new_pos) {
+					last_distance = distance;
+
+					new_node.pos = if is_in_range(new_pos, finish_range) {
+						end
+					} else {
+						new_pos
+					};
+				}
+			}
+		});
+
+		if last_distance < f32::MAX {
+			// Find the nearest node to connect to
+			last_distance = f32::MAX;
+			nodes.iter().enumerate().for_each(|(key, node)| {
+				let (_, _, distance) = get_distances(new_node.pos, node.pos, nodes[key].distance);
+				if last_distance > distance && is_collision_free(area, rows, node, new_node.pos) {
+					last_distance = distance;
+					new_node.parent = key;
+					new_node.distance = distance;
+				}
+			});
+
+			// Append the node to the list
+			nodes.push(new_node.clone());
+			let new_node_index = nodes.len() - 1;
+			let check_range = get_range(new_node.pos, (STEP_DISTANCE as i32) * REWIRE_DISTANCE_FACTOR);
+
+			// Rewire all nodes
+			nodes.iter_mut().for_each(|node| {
+				if node.pos != new_node.pos && is_in_range(node.pos, check_range) {
+					let (_, _, distance) = get_distances(new_node.pos, node.pos, new_node.distance);
+					if node.distance > distance && is_collision_free(area, rows, node, new_node.pos) {
+						node.parent = new_node_index;
+						node.distance = distance;
+					}
+				}
+			});
+
+			if new_node.pos == end {
+				found_end = true;
+				println!("RRT-V3 End reached within {}: {:.6?}", nodes.len(), benchmark.elapsed());
+			}
+		}
+	}
+
+	if !found_end { println!("RRT-V3 Calc: No conneciton found"); }
+	println!("RRT-V3 Calc: {:.6?}", benchmark.elapsed());
+
+	// For the return value we need only the position as a tuple ((x0, y0), (x1, y1)) to draw the tree/network
+	let result_nodes = nodes.iter().map(|node| (node.pos, nodes[node.parent].pos)).collect();
+
+	// Return the tuple of the path-vector and tree-vector
+	TreeResult {
+		path: find_path("RRT-V3", end, &nodes),
+		tree: result_nodes,
+	}
+}
+
+/// Checks if a point lies on the elliptic plane defined by the rotated bounding box of the path.
+///
+/// The rotation is defined by the start and end points.
+/// The Ellipse is defined by the min and max values from the path, the bounding box these values define.
+///
+/// # Arguments:
+///
+/// * `start` - Start-Point
+/// * `end` - End-Point
+/// * `path` - The path from the end to the start
+/// * `pos` - The position to check
+///
+/// # Result:
+///
+/// If the point lies on an ellipsis defined by the bounding box of the path
+fn in_elliptic_region(start: (usize, usize), end: (usize, usize), path: &[(usize, usize)], pos: (usize, usize)) -> bool {
+	// If there is no path, the point lies on the area...
+	if path.len() == 0 {
+		return true;
+	}
+
+	let (dist_x, dist_y ,_) = get_distances(start, end, 0.0);
+	let cx = start.0 + (dist_x as usize / 2);
+	let cy = start.1 + (dist_y as usize / 2);
+	let angle = dist_y.atan2(dist_x);
+
+	let rotate = |pos: &(usize, usize)| {
+		let (x, y, d) = get_distances(*pos, (cx, cy), 0.0);
+		let alpha = y.atan2(x) + angle;
+		( (d * alpha.cos()) as usize, (d * alpha.sin()) as usize )
+	};
+
+	// rotate the position and move it to (0,0)
+	let rotated = rotate(&pos);
+
+	// The dimension of the rotated rectangle around the path: ( (x_min, y_min), (x_max, y_max) )
+	let mut max: ((usize, usize), (usize, usize)) = ((usize::max_value(), usize::max_value()), (0, 0));
+	path.iter().for_each(|p| {
+		let rotated = rotate(p);
+		max = (
+			( usize::min(max.0.0, rotated.0), usize::min(max.0.1, rotated.1) ),
+			( usize::max(max.1.0, rotated.0), usize::max(max.1.1, rotated.1) ),
+		);
+	});
+
+	// An ellipsis is defined by: x^2 / a^2 + y^2 / b^2 = 1
+	// for values above 1.0 the point lies not in/on the ellipsis-plane
+	let x = rotated.0 as f32;
+	let y = rotated.1 as f32;
+	let a = (max.1.0 - max.0.0) as f32 / 2.0;
+	let b = (max.1.1 - max.0.1) as f32 / 2.0;
+
+	//println!("max: {:?} -> {:?}", a, b);
+
+	(x.sqrt() / a.sqrt()) + (y.sqrt() / b.sqrt()) <= 1.0
+}
+
 /// Get a range tuple around the given position
 ///
 /// # Arguments:
@@ -395,24 +575,27 @@ fn find_path(algorithm: &str, end: (usize, usize), nodes: &[Node]) -> Vec<(usize
 
 	// 1. Find the end in the tree, then go backwards
 	let finish = nodes.iter().find(|&node| node.pos == end).unwrap_or(&nodes[0]);
-	result.push(finish.pos);
+	if finish.pos == end {
+		result.push(finish.pos);
 
-	// 2. loop until the start is reached and color the area
-	let mut parent = finish.parent;
-	loop {
-		let node = &nodes[parent];
-		result.push(node.pos);
-		if node.parent == 0 {
-			break;
+		// 2. loop until the start is reached and color the area
+		let mut parent = finish.parent;
+		loop {
+			let node = &nodes[parent];
+			result.push(node.pos);
+			if node.parent == 0 {
+				break;
+			}
+			parent = node.parent;
 		}
-		parent = node.parent;
+		result.push(nodes[0].pos);
 	}
-	result.push(nodes[0].pos);
 
-	println!("{} Path-Calculation: {:.6?}", algorithm, benchmark.elapsed());
-	println!("{} Path length: {}", algorithm, result.len());
-	println!("{} Tree Edges: {}", algorithm, nodes.len());
-
+	if algorithm.len() > 0 {
+		println!("{} Path-Calculation: {:.6?}", algorithm, benchmark.elapsed());
+		println!("{} Path length: {}", algorithm, result.len());
+		println!("{} Tree Edges: {}", algorithm, nodes.len());
+	}
 	result
 }
 

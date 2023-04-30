@@ -97,6 +97,13 @@ fn main() {
 		let path = tree::rrt_v2(&mut field, rows, cols, start, end);
 		let _ = export_image("rrt_v2", &field, (rows, cols), start, end, &path.path, Some(&path.tree));
 	}
+	// Use RRT* - Rapidly-Exploring Random Tree with optimized area after the end is reached
+	{
+		#[allow(clippy::redundant_clone)]
+		let mut field = area.clone();
+		let path = tree::rrt_v3(&mut field, rows, cols, start, end);
+		let _ = export_image("rrt_v3", &field, (rows, cols), start, end, &path.path, Some(&path.tree));
+	}
 }
 
 /// Creates the area and adds random created obstacles
@@ -225,24 +232,26 @@ fn export_image(algorithm: &str, area: &[u64], area_size: (&usize, &usize), star
 	}
 
 	// Draw the path
-	let mut last = &path[0];
-	for p in path {
-		// Draw a Point/Node
-		let c_row = p.0 * field_size;
-		let c_col = p.1 * field_size;
-		for x in c_row..(c_row + field_size) {
-			for y in c_col..(c_col + field_size) {
-				let px = img.get_pixel_mut(x as u32, y as u32);
-				*px = image::Rgb(color);
+	if path.len() > 0 {
+		let mut last = &path[0];
+		for p in path {
+			// Draw a Point/Node
+			let c_row = p.0 * field_size;
+			let c_col = p.1 * field_size;
+			for x in c_row..(c_row + field_size) {
+				for y in c_col..(c_col + field_size) {
+					let px = img.get_pixel_mut(x as u32, y as u32);
+					*px = image::Rgb(color);
+				}
 			}
-		}
 
-		// Draw the line over the point
-		if line.is_some() && p != last {
-			draw_line(&mut img, color,
-				((last.0 * field_size) + fild_size_offset, (last.1 * field_size) + fild_size_offset),
-				((p.0 * field_size) + fild_size_offset, (p.1 * field_size) + fild_size_offset));
-			last = p;
+			// Draw the line over the point
+			if line.is_some() && p != last {
+				draw_line(&mut img, color,
+					((last.0 * field_size) + fild_size_offset, (last.1 * field_size) + fild_size_offset),
+					((p.0 * field_size) + fild_size_offset, (p.1 * field_size) + fild_size_offset));
+				last = p;
+			}
 		}
 	}
 
