@@ -4,11 +4,11 @@
 #include <eeros/core/Executor.hpp>
 #include <eeros/control/PeripheralInput.hpp>
 #include <eeros/control/PeripheralOutput.hpp>
+#include <eeros/control/Constant.hpp>
 
 #include "customBlocks/ServoController.hpp"
 #include "customBlocks/MotorController.hpp"
 #include "customBlocks/MotorBlocksController.hpp"
-
 using namespace eeros::control;
 
 class RobotControlSystem {
@@ -32,7 +32,11 @@ public:
 	PeripheralOutput<> motorLeft;
 	PeripheralOutput<> motorRight;
 	MotorController<> motorControllerLeft;
-	MotorBlocksController<> motorControllerRight;
+	MotorController<> motorControllerRight;
+
+	// Robot Geometry
+	Constant<double> wheelLeftDiameter;
+	Constant<double> wheelRightDiameter;
 
 	TimeDomain timedomain;
 };

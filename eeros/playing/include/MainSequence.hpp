@@ -16,8 +16,8 @@ public:
                  MyRobotSafetyProperties &sp, ControlSystem &cs)
         : eeros::sequencer::Sequence(name, seq),
           ss(ss),
-          sp(sp),
-          cs(cs),
+          safetyProperties(sp),
+          controlSystem(cs),
 
           sleep("Sleep", this)
     {
@@ -35,9 +35,9 @@ public:
     }
 
 private:
-    eeros::safety::SafetySystem &ss;
-    ControlSystem &cs;
-    MyRobotSafetyProperties &sp;
+    eeros::safety::SafetySystem &safetySystem;
+    ControlSystem &controlSystem;
+    MyRobotSafetyProperties &safetyProperties;
 
     eeros::sequencer::Wait sleep;
 };

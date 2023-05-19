@@ -14,10 +14,15 @@ RobotControlSystem::RobotControlSystem(double dt) :
 	servoZ("servo3"),
 
 	// Motor Controlling
-	motorEncoderLeft("enc1"),
+	motorEncoderLeft("enc3"), // Encoder enc1 seems to be defect or EEROS is doing wired stuff
 	motorEncoderRight("enc2"),
-	motorLeft("motor1"),
+	motorLeft("motor3"),
 	motorRight("motor2"),
+
+	// Geometry
+	wheelLeftDiameter(800.0),
+	wheelRightDiameter(800.0),
+
 	timedomain("RobotTimeDomain", dt, true)
 {
 	// Name the Servo-Controlling blocks

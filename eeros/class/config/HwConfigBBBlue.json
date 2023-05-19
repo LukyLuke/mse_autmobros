@@ -185,36 +185,21 @@
 			"channel1": {
 				"signalId": "enc1",
 				"scale": [
-					{ "id" : "wheel",
-						"minIn": 0,  "maxIn":  1,
-						"minOut": 0, "maxOut": 25 },
-					{ "id" : "gear",
-						"minIn": 0,  "maxIn":  104,
-						"minOut": 0, "maxOut": 3441 },
-					{ "id" : "enc",
-						"minIn":  0, "maxIn":  6.283185307,
-						"minOut": 0, "maxOut": 16 },
 					{ "id" : "fqd",
-						"minIn":  0, "maxIn":  1,
-						"minOut": 0, "maxOut": 4 }
+						"minIn":  0, "maxIn":  6.283185307,
+						"minOut": 0, "maxOut": 16 }
 				],
 				"range": [
-					{ "id" : "wheel", "noLimit": true },
-					{ "id" : "gear",  "noLimit": true },
-					{ "id" : "enc",   "noLimit": true },
-					{ "id" : "fqd",   "noLimit": true }
+					{ "id" : "fqd", "noLimit": true }
 				],
 				"unit": "rad"
 			},
 			"channel2": {
 				"signalId": "enc2",
 				"scale": [
-					{ "id" : "wheel",
-						"minIn": 0,  "maxIn":  1,
-						"minOut": 0, "maxOut": 25 },
 					{ "id" : "gear",
-						"minIn": 0,  "maxIn":  104,
-						"minOut": 0, "maxOut": 3441 },
+						"minIn":  0, "maxIn":  1,
+						"minOut": 0, "maxOut": 33.0865384615 },
 					{ "id" : "enc",
 						"minIn":  0, "maxIn":  6.283185307,
 						"minOut": 0, "maxOut": 16 },
@@ -223,7 +208,6 @@
 						"minOut": 0, "maxOut": 4 }
 				],
 				"range": [
-					{ "id" : "wheel", "noLimit": true },
 					{ "id" : "gear",  "noLimit": true },
 					{ "id" : "enc",   "noLimit": true },
 					{ "id" : "fqd",   "noLimit": true }
@@ -233,12 +217,20 @@
 			"channel3": {
 				"signalId": "enc3",
 				"scale": [
-					{ "id" : "fqd",
+					{ "id" : "gear",
+						"minIn":  0, "maxIn":  1,
+						"minOut": 0, "maxOut": 33.0865384615 },
+					{ "id" : "enc",
 						"minIn":  0, "maxIn":  6.283185307,
-						"minOut": 0, "maxOut": 4000 }
+						"minOut": 0, "maxOut": 16 },
+					{ "id" : "fqd",
+						"minIn":  0, "maxIn":  1,
+						"minOut": 0, "maxOut": 4 }
 				],
 				"range": [
-					{ "id" : "fqd", "noLimit": true }
+					{ "id" : "gear",  "noLimit": true },
+					{ "id" : "enc",   "noLimit": true },
+					{ "id" : "fqd",   "noLimit": true }
 				],
 				"unit": "rad"
 			},
@@ -247,7 +239,7 @@
 				"scale": [
 					{ "id" : "fqd",
 						"minIn":  0, "maxIn":  6.283185307,
-						"minOut": 0, "maxOut": 4000 }
+						"minOut": 0, "maxOut": 16 }
 				],
 				"range": [
 					{ "id" : "fqd", "noLimit": true }
