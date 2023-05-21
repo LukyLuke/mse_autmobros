@@ -1,0 +1,11 @@
+[package]
+name = "testing"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+librobotcontrol-sys = "0.4"
+sysfs_gpio = "0.6"
+sysfs-pwm = "0.1"
+spidev = "0.5"
+i2cdev = "0.5"

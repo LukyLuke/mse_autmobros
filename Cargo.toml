@@ -2,3 +2,7 @@
 members = [
 	"pathfinder",
 ]
+exclude = [
+	"beaglebone/testing"
+]
+
