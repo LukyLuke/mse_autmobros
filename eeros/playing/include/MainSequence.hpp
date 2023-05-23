@@ -35,9 +35,9 @@ public:
 		rc_motor_init_freq(RC_MOTOR_DEFAULT_PWM_FREQ);
 
 		// Define a path to drive along
-		planner.add(0,   100, TURN_RADIUS);
-		planner.add(100, 100, TURN_RADIUS);
-		planner.add(100, 0,   TURN_RADIUS);
+		planner.add(0,   500, TURN_RADIUS);
+		planner.add(500, 500, TURN_RADIUS);
+		planner.add(500, 0,   TURN_RADIUS);
 		planner.add(0,   0,   0);
 
 		log.info() << "Sequence created: " << name;
@@ -53,8 +53,14 @@ public:
 		while (eeros::sequencer::Sequencer::running) {
 			log.info() << "Left: " << wheel_left.get_distance() << " / Right: " << wheel_right.get_distance();
 
-			wheel_left.set_speed(0.2);
 			wheel_right.set_speed(0.3);
+
+			if (wheel_left.get_distance_total() > 500) {
+				wheel_left.stop();
+				//wheel_left.reset_distance();
+			} else {
+				wheel_left.set_speed(0.2);
+			}
 
 			sleep(step_size);
 		}
