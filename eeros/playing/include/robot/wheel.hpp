@@ -1,7 +1,8 @@
 #pragma once
 
-#include <robotcontrol.h>
 #include <cmath>
+#include <robotcontrol.h>
+
 #include "robot/motor.hpp"
 
 class Wheel {
@@ -10,8 +11,8 @@ public:
 		: radius(diameter / 2), backward(backward),
 		  encoder(encoder), motor(Motor(motor, backward))
 	{
-		reset_encoder_value = this->get_encoder_value();
-		last_encoder_value = this->get_encoder_value();
+		reset_encoder_value = 0;
+		last_encoder_value = 0;
 	}
 
 	void reset_distance() {
@@ -26,14 +27,18 @@ public:
 		return calculate_distance(last_encoder_value);
 	}
 
-	void set_speed(double speed) {
+	void step() {
 		last_encoder_value = get_encoder_value();
+	}
+
+	void set_values(double velocity, double angle, double wheel_distance) {
+		double angular_velocity = (angle * wheel_distance) * (backward ? 1 : -1);
+		double speed = ((2 * velocity) - angular_velocity) / (2 * radius);
 		motor.run(speed);
 	}
 
 	void stop() {
 		motor.stop();
-		last_encoder_value = get_encoder_value();
 	}
 
 
@@ -59,7 +64,7 @@ private:
 	double calculate_distance(int32_t delta) {
 		double encoder_delta = get_encoder_value() - delta;
 		double angle = (encoder_delta / ENCODER_RESOLUTION) / GEAR_RATIO;
-		return (angle * radius) * (backward ? 1 : -1);
+		return (angle * radius) * (backward ? -1 : 1);
 	}
 
 };
