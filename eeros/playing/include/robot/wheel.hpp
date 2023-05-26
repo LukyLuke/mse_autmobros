@@ -32,9 +32,9 @@ public:
 	}
 
 	void set_values(double velocity, double angle, double wheel_distance) {
-		double angular_velocity = (angle * wheel_distance) * (backward ? 1 : -1);
-		double speed = ((2 * velocity) - angular_velocity) / (2 * radius);
-		motor.run(speed);
+		//double angular_velocity = (angle * wheel_distance);
+		//double speed = ((2 * velocity) - angular_velocity) / (2 * radius);
+		motor.run(velocity);
 	}
 
 	void stop() {

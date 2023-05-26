@@ -25,33 +25,45 @@ public:
 		rc_motor_cleanup();
 	}
 
-	void set_goal(std::tuple<double, double, double> pos) {
-		end_position = { std::get<0>(pos), std::get<1>(pos), std::get<2>(pos) };
+	void set_goal(double x, double y, double orientation) {
+		end_position = { x, y, orientation };
 	}
 
 	void step() {
 		auto position = get_current_position();
 		auto goal = get_vector(position, end_position);
-		log.info() << "Distance: " << std::get<2>(goal) << " at " << std::get<3>(goal);
-		log.info() << "Position: " << std::get<0>(position) << ", " << std::get<1>(position);
+		log.info() << "Position (x/y/angle): " << std::get<0>(position) << ", " << std::get<1>(position) << ", " << std::get<2>(position) << "r = " << (std::get<2>(position) * (180.0 / M_PI)) << "°";
+		log.info() << "Goal:  " << std::get<2>(goal) << " at " << std::get<3>(goal) << " = " << (std::get<3>(goal) * (180.0 / M_PI));
+		//log.info() << "delta: " << std::get<0>(goal) << ", " << std::get<1>(goal);
 
 		if (std::get<2>(goal) <= THRESHOLD_END) {
 			wheel_left.stop();
 			wheel_right.stop();
-			log.info() << "!!! Stopped !!!";
+			log.info() << "!!! Goal Reached !!!";
 
 		} else {
 			// Velocity based on the angle: take a hard turn slower and drive fast straight
 			double angular_velocity = MAX_VELOCITY;
-			double angle_change = std::get<3>(goal) * K_P_ORIENTATION;
+			double angle_change = std::get<3>(goal) * K_P_SLOWDOWN;
 			if (angle_change > THRESHOLD_ORIENTATION) {
 				angular_velocity = MAX_VELOCITY / std::sqrt( std::abs(angle_change) + 1.0 );
 			}
 
 			// Velocity based on the distance to the end: get slower
-			double goal_velocity = MAX_VELOCITY * ( THRESHOLD_DISTANCE / std::get<2>(goal) );
+			double distance_velocity = MAX_VELOCITY;
+			double distance_change = std::get<2>(goal) * K_P_SLOWDOWN;
+			if (distance_change < THRESHOLD_DISTANCE) {
+				distance_velocity = (MAX_VELOCITY * distance_change / THRESHOLD_DISTANCE);
+			}
 
-			double velocity = std::min(MAX_VELOCITY, std::min(goal_velocity, angular_velocity));
+			// The calculated velocity for driving
+			double velocity = std::max(MIN_VELOCITY, std::min(MAX_VELOCITY, std::min(distance_velocity, angular_velocity)) );
+
+			// Speed up
+			if (velocity > last_velocity) {
+				velocity = last_velocity * K_P_SPEEDUP;
+			}
+			last_velocity = velocity;
 			log.info() << "Velocity: " << velocity;
 
 			wheel_left.set_values(velocity, angle_change, wheel_distance);
@@ -61,9 +73,11 @@ public:
 	}
 
 private:
-	const double MAX_VELOCITY = 0.5;
-	const double K_P_ORIENTATION = 0.8;
-	const double THRESHOLD_ORIENTATION = 0.8;
+	const double MAX_VELOCITY = 0.3;
+	const double MIN_VELOCITY = 0.05;
+	const double K_P_SLOWDOWN = 0.8;
+	const double K_P_SPEEDUP = 1.2;
+	const double THRESHOLD_ORIENTATION = 0.4;
 	const double THRESHOLD_DISTANCE = 300.0;
 	const double THRESHOLD_END = 10.0;
 
@@ -74,10 +88,9 @@ private:
 
 	eeros::logger::Logger log = eeros::logger::Logger::getLogger(26);
 
-	double orientation_angle = 0.0;
 	std::tuple<double, double, double> current_position = {0, 0, 0};
 	std::tuple<double, double, double> end_position = {0, 0, 0};
-
+	double last_velocity = MIN_VELOCITY;
 
 	/**
 	 * Calculates the current position of the robot based on the distances the wheels have driven.
@@ -87,35 +100,16 @@ private:
 	std::tuple<double, double, double> get_current_position() {
 		double left_dist  = wheel_left.get_distance();
 		double right_dist = wheel_right.get_distance();
+		double center_dist = (left_dist + right_dist) / 2.0;
 		wheel_left.step();
 		wheel_right.step();
 
 		double last_angle = std::get<2>(current_position);
-		//double center = (left_dist + right_dist) / 2.0;
-		double angle = 0;
-		double center = 1;
-		if ((right_dist - left_dist) > 0.1) {
-			angle = ((right_dist - left_dist) / wheel_distance);
-			double rotation_center = ((right_dist + left_dist) / (right_dist - left_dist)) * (wheel_distance / 2);
-			center = rotation_center * angle;
+		double x = (center_dist * std::acos(last_angle) / M_PI) + std::get<0>(current_position);
+		double y = (center_dist * std::asin(last_angle) / M_PI) + std::get<1>(current_position);
+		double angle = (((right_dist - left_dist) / wheel_distance)) + last_angle;
 
-			log.info() << angle << " | " << rotation_center << " | " << center;
-		}
-
-		double x = (center * std::cos(angle / 2)) + std::get<0>(current_position);
-		double y = (center * std::sin(angle / 2)) + std::get<1>(current_position);
-
-		return std::make_tuple( x, y, angle + last_angle );
-		/*
-		double center = (left_dist + right_dist) / 2.0;
-		double orientation = std::get<2>(current_position);
-
-		double angle = ((left_dist - right_dist) / wheel_distance);
-		double x = (center * std::cos(orientation)) + std::get<0>(current_position);
-		double y = (center * std::sin(orientation)) + std::get<1>(current_position);
-
-		return std::make_tuple( x, y, angle + orientation );
-		*/
+		return std::make_tuple( x, y, angle );
 	}
 
 	/**

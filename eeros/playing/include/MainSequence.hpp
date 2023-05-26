@@ -25,7 +25,7 @@ public:
 		  controlSystem(controlSystem),
 		  safetyProperties(safetyProperties),
 		  sleep("Sleep", this),
-		  robot(155.0, 81.0),
+		  robot(155.0, 80.0),
 		  planner()
 	{
 		// Define a path to drive along
@@ -40,7 +40,7 @@ public:
 	int action() {
 		double step_size = 0.1;
 
-		robot.set_goal(std::make_tuple(100, 100, 0));
+		robot.set_goal(2 * 80.0 * M_PI, 0, 0);
 
 		while (eeros::sequencer::Sequencer::running) {
 			robot.step();

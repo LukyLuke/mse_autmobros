@@ -12,12 +12,12 @@ public:
 	}
 
 	bool run(double_t speed) {
-		//return rc_motor_set(motor, speed * (backward ? 1 : -1)) == 0;
-		return rc_motor_set(motor, speed) == 0;
+		return rc_motor_set(motor, speed * (backward ? -1 : 1)) == 0;
 	}
 
 	bool stop() {
-		return rc_motor_brake(motor) == 0;
+		//return rc_motor_brake(motor) == 0;
+		return rc_motor_set(motor, 0) == 0;
 	}
 
 private:
